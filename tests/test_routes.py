@@ -150,12 +150,9 @@ class TestProductRoutes(TestCase):
         """It should read a Product"""
         product = self._create_products(1)
         test_product = product[0]
-        response = self.client.get(f"BASE_URL/{test_product.id}")
+        response = self.client.get(f"{BASE_URL}/{test_product.id}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Check that the location header was correct
-        response = self.client.get(location)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
         new_product = response.get_json()
         self.assertEqual(new_product["name"], test_product.name)
         self.assertEqual(new_product["description"], test_product.description)
@@ -185,6 +182,25 @@ class TestProductRoutes(TestCase):
     #
     # ADD YOUR TEST CASES HERE
     #
+
+    # ----------------------------------------------------------
+    # TEST Product not found
+    # ----------------------------------------------------------
+
+    def test_get_product(self):
+        """It should read a Product"""
+        product = self._create_products(1)
+        test_product = product[0]
+        response = self.client.get(f"{BASE_URL}/{test_product.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_product = response.get_json()
+        self.assertEqual(new_product["name"], test_product.name)
+        self.assertEqual(new_product["description"], test_product.description)
+        self.assertEqual(Decimal(new_product["price"]), test_product.price)
+        self.assertEqual(new_product["available"], test_product.available)
+        self.assertEqual(new_product["category"], test_product.category.name)
+
 
     ######################################################################
     # Utility functions
