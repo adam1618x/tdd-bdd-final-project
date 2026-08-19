@@ -33,6 +33,7 @@ from service.common import status
 from service.models import db, init_db, Product
 from tests.factories import ProductFactory
 from urllib.parse import quote_plus
+from service.models import DataValidationError
 
 # Disable all but critical errors during normal test run
 # uncomment for debugging failing tests
@@ -256,6 +257,87 @@ class TestProductRoutes(TestCase):
         self.assertEqual(len(data), count_name)
         for product in data:
             self.assertEqual(product["name"], test_name)
+
+    # ----------------------------------------------------------
+    # Test Lsiting by category
+    # ----------------------------------------------------------
+
+    def test_query_by_category(self):
+        """It should Query Products by category"""
+        products = self._create_products(5)
+        test_category = products[0].category
+        count_category = len([product for product in products if product.category == test_category])
+        response = self.client.get(
+            BASE_URL, query_string=f"category={test_category.name}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), count_category)
+        for product in data:
+            self.assertEqual(product["category"], test_category.name)
+
+    # ----------------------------------------------------------
+    # Test Lsiting by availability
+    # ----------------------------------------------------------
+
+    def test_query_by_availability(self):
+        """It should Query Products by availability"""
+        products = self._create_products(10)
+        available_products = [product for product in products if product.available is True]
+        available_count = len(available_products)        
+        # test for available
+        response = self.client.get(
+            BASE_URL, query_string="available=true"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
+        self.assertEqual(len(data), available_count)
+        # check the data just to be sure
+        for product in data:
+            self.assertEqual(product["available"], True)
+
+    def test_update_product_not_found(self):
+        """It should not Update a Product that doesn't exist"""
+        response = self.client.put(f"{BASE_URL}/0", json={"name": "test"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_product_not_found(self):
+        """It should return 204 even when deleting a Product that doesn't exist"""
+        response = self.client.delete(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_bad_request(self):
+        """It should not Create when sending malformed JSON"""
+        response = self.client.post(BASE_URL, data="not valid json", content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_update_a_product_no_id(self):
+        """It should not Update a Product with no id"""
+        product = ProductFactory()
+        product.id = None
+        self.assertRaises(DataValidationError, product.update)
+
+    def test_deserialize_missing_data(self):
+        """It should not Deserialize a Product with missing data"""
+        data = {"id": 1, "name": "Kitchen table"}
+        product = Product()
+        self.assertRaises(DataValidationError, product.deserialize, data)
+
+    def test_deserialize_bad_available(self):
+        """It should not Deserialize a bad available attribute"""
+        test_product = ProductFactory()
+        data = test_product.serialize()
+        data["available"] = "true"
+        product = Product()
+        self.assertRaises(DataValidationError, product.deserialize, data)
+
+    def test_deserialize_bad_category(self):
+        """It should not Deserialize a bad category attribute"""
+        test_product = ProductFactory()
+        data = test_product.serialize()
+        data["category"] = "invalid_category"
+        product = Product()
+        self.assertRaises(DataValidationError, product.deserialize, data)
 
     ######################################################################
     # Utility functions
