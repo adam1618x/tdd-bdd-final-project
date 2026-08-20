@@ -75,6 +75,12 @@ def step_impl(context, element_name):
     element = context.driver.find_element(By.ID, element_id)
     assert(element.get_attribute('value') == u'')
 
+@then('I should see "{text}" in the "{element_name}" field')
+def step_impl(context, text, element_name):
+    element_id = ID_PREFIX + element_name.lower().replace(' ', '_')
+    element = context.driver.find_element(By.ID, element_id)
+    assert(element.get_attribute('value') == text)
+
 ##################################################################
 # These two function simulate copy and paste
 ##################################################################
@@ -104,7 +110,10 @@ def step_impl(context, element_name):
 # to get the element id of any button
 ##################################################################
 
-## UPDATE CODE HERE ##
+@when('I press the "{button}" button')
+def step_impl(context, button):
+    button_id = button.lower()+"-btn"
+    context.driver.find_element_by_id(button_id).click()
 
 ##################################################################
 # This code works because of the following naming convention:
@@ -113,17 +122,16 @@ def step_impl(context, element_name):
 # We can then lowercase the name and prefix with pet_ to get the id
 ##################################################################
 
-@then('I should see "{text_string}" in the "{element_name}" field')
-def step_impl(context, text_string, element_name):
-    element_id = ID_PREFIX + element_name.lower().replace(' ', '_')
-    found = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.text_to_be_present_in_element_value(
-            (By.ID, element_id),
-            text_string
-        )
-    )
-    assert(found)
+@then('I should see "{name}" in the results')
+def step_impl(context, name):
+    element = context.driver.find_element(By.ID, 'search_results')
+    assert name in element.text
 
+@then('I should not see "{name}" in the results')
+def step_impl(context, name):
+    element = context.driver.find_element(By.ID, 'search_results')
+    assert name not in element.text
+    
 @when('I change "{element_name}" to "{text_string}"')
 def step_impl(context, element_name, text_string):
     element_id = ID_PREFIX + element_name.lower().replace(' ', '_')
@@ -132,3 +140,14 @@ def step_impl(context, element_name, text_string):
     )
     element.clear()
     element.send_keys(text_string)
+
+@then('I should see the message "{message}"')
+def step_impl(context, message):
+    found = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.text_to_be_present_in_element(
+            (By.ID, 'flash_message'),
+            message
+        )
+    )
+    assert(found)
+
